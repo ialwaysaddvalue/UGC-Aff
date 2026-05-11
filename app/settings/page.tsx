@@ -23,6 +23,7 @@ function APIKeyInput({
   placeholder,
   hint,
   docsUrl,
+  serverConfigured,
 }: {
   label: string
   value: string
@@ -30,6 +31,7 @@ function APIKeyInput({
   placeholder: string
   hint?: string
   docsUrl?: string
+  serverConfigured?: boolean
 }) {
   const [show, setShow] = useState(false)
   const hasKey = value.length > 10
@@ -40,7 +42,8 @@ function APIKeyInput({
         <label className="text-sm font-semibold text-slate-200">{label}</label>
         <div className="flex items-center gap-2">
           {hasKey && <Badge variant="success"><CheckCircle2 className="h-3 w-3" /> Connected</Badge>}
-          {!hasKey && <Badge variant="warning"><AlertCircle className="h-3 w-3" /> Not configured</Badge>}
+          {!hasKey && serverConfigured && <Badge variant="success"><CheckCircle2 className="h-3 w-3" /> Server key active</Badge>}
+          {!hasKey && !serverConfigured && <Badge variant="warning"><AlertCircle className="h-3 w-3" /> Not configured</Badge>}
           {docsUrl && (
             <a href={docsUrl} target="_blank" rel="noopener noreferrer" className="text-slate-400 hover:text-brand-400 transition-colors">
               <ExternalLink className="h-3.5 w-3.5" />
@@ -92,38 +95,38 @@ export default function SettingsPage() {
   const integrationStatus = [
     {
       name: 'OpenAI',
-      status: local.openaiApiKey.length > 10 ? 'connected' : 'missing',
+      status: local.openaiApiKey.length > 10 ? 'connected' : 'server',
       icon: Bot,
       color: 'text-emerald-400',
       desc: 'Script generation, captions, hook variations',
     },
     {
       name: 'Claude (Anthropic)',
-      status: local.anthropicApiKey.length > 10 ? 'connected' : 'missing',
+      status: local.anthropicApiKey.length > 10 ? 'connected' : 'server',
       icon: Bot,
       color: 'text-amber-400',
       desc: 'Advanced script writing, trend analysis',
     },
     {
       name: 'HeyGen',
-      status: local.heygenApiKey.length > 10 ? 'connected' : 'missing',
+      status: local.heygenApiKey.length > 10 ? 'connected' : 'server',
       icon: Video,
       color: 'text-violet-400',
       desc: 'AI avatar UGC video generation',
     },
     {
       name: 'Higgsfield AI',
-      status: local.higgsfieldApiKey.length > 10 ? 'connected' : 'missing',
+      status: 'mcp',
       icon: Video,
       color: 'text-blue-400',
-      desc: 'Cinematic AI video generation',
+      desc: 'Connected via MCP — no API key required',
     },
     {
       name: 'Glitchy',
-      status: local.glitchyApiKey.length > 10 ? 'connected' : 'optional',
+      status: 'optional',
       icon: Target,
       color: 'text-brand-400',
-      desc: 'Affiliate campaign management',
+      desc: 'No API needed — manage campaigns manually with your affiliate links',
     },
   ]
 
@@ -156,6 +159,7 @@ export default function SettingsPage() {
                   placeholder="sk-ant-api03-..."
                   hint="Used for script generation, hook variations, and trend analysis. Claude is the recommended AI for scripts."
                   docsUrl="https://console.anthropic.com/settings/keys"
+                  serverConfigured
                 />
                 <APIKeyInput
                   label="OpenAI (GPT-4o)"
@@ -164,6 +168,7 @@ export default function SettingsPage() {
                   placeholder="sk-proj-..."
                   hint="Used for script generation, caption writing, and hashtag optimization."
                   docsUrl="https://platform.openai.com/api-keys"
+                  serverConfigured
                 />
               </div>
             </div>
@@ -183,15 +188,17 @@ export default function SettingsPage() {
                   placeholder="Your HeyGen API key..."
                   hint="Access 100+ AI avatars for UGC-style talking head videos. Perfect for authentic creator content."
                   docsUrl="https://app.heygen.com/settings/api"
+                  serverConfigured
                 />
-                <APIKeyInput
-                  label="Higgsfield AI API Key"
-                  value={local.higgsfieldApiKey}
-                  onChange={v => update('higgsfieldApiKey', v)}
-                  placeholder="Your Higgsfield API key..."
-                  hint="Generate cinematic B-roll footage and AI videos from text prompts."
-                  docsUrl="https://app.higgsfield.ai/settings"
-                />
+                <div className="p-4 bg-bg-surface border border-emerald-500/20 rounded-xl">
+                  <div className="flex items-center justify-between mb-1">
+                    <label className="text-sm font-semibold text-slate-200">Higgsfield AI</label>
+                    <Badge variant="success"><CheckCircle2 className="h-3 w-3" /> Via MCP</Badge>
+                  </div>
+                  <p className="text-xs text-slate-500 mt-1">
+                    Higgsfield is connected through your MCP integration — no API key entry needed here.
+                  </p>
+                </div>
               </div>
             </div>
 
@@ -200,15 +207,19 @@ export default function SettingsPage() {
               <div className="flex items-center gap-2 mb-4">
                 <Target className="h-4 w-4 text-brand-400" />
                 <h3 className="text-sm font-semibold text-slate-100">Glitchy Affiliate Platform</h3>
-                <Badge variant="success">Monetization</Badge>
+                <Badge variant="info">No API Required</Badge>
               </div>
               <div className="space-y-3">
+                <div className="p-3 bg-brand-600/5 border border-brand-600/20 rounded-xl text-xs text-slate-400 leading-relaxed">
+                  Glitchy works without an API — just paste your affiliate links directly into the Campaigns page.
+                  Earn per click with zero setup required.
+                </div>
                 <APIKeyInput
                   label="Glitchy API Key (Optional)"
                   value={local.glitchyApiKey}
                   onChange={v => update('glitchyApiKey', v)}
                   placeholder="Your Glitchy API key..."
-                  hint="Optional: Enables automatic campaign sync. You can also manage campaigns manually."
+                  hint="Optional future use. Not needed to use the platform today."
                   docsUrl="https://glitchy.com/dashboard/settings"
                 />
                 <Input
@@ -311,27 +322,35 @@ export default function SettingsPage() {
 
         <TabsContent value="status">
           <div className="space-y-3">
-            {integrationStatus.map(({ name, status, icon: Icon, color, desc }) => (
-              <div key={name} className="p-4 bg-bg-card border border-bg-border rounded-xl flex items-start gap-4">
-                <div className={`p-2.5 rounded-xl ${status === 'connected' ? 'bg-emerald-500/10' : status === 'optional' ? 'bg-amber-500/10' : 'bg-red-500/10'}`}>
-                  <Icon className={`h-5 w-5 ${status === 'connected' ? 'text-emerald-400' : status === 'optional' ? 'text-amber-400' : 'text-red-400'}`} />
-                </div>
-                <div className="flex-1">
-                  <div className="flex items-center gap-2 mb-1">
-                    <p className="text-sm font-semibold text-slate-100">{name}</p>
-                    <Badge variant={status === 'connected' ? 'success' : status === 'optional' ? 'warning' : 'danger'}>
-                      {status === 'connected' ? 'Connected' : status === 'optional' ? 'Optional' : 'Not configured'}
-                    </Badge>
+            {integrationStatus.map(({ name, status, icon: Icon, color, desc }) => {
+              const bgColor = status === 'connected' || status === 'server' || status === 'mcp'
+                ? 'bg-emerald-500/10'
+                : status === 'optional' ? 'bg-amber-500/10' : 'bg-red-500/10'
+              const iconColor = status === 'connected' || status === 'server' || status === 'mcp'
+                ? 'text-emerald-400'
+                : status === 'optional' ? 'text-amber-400' : 'text-red-400'
+              const badgeVariant = status === 'connected' || status === 'server' || status === 'mcp'
+                ? 'success' : status === 'optional' ? 'warning' : 'danger'
+              const badgeLabel =
+                status === 'connected' ? 'Connected' :
+                status === 'server' ? '✓ Server key active' :
+                status === 'mcp' ? '✓ Via MCP' :
+                status === 'optional' ? 'Not needed' : 'Not configured'
+              return (
+                <div key={name} className="p-4 bg-bg-card border border-bg-border rounded-xl flex items-start gap-4">
+                  <div className={`p-2.5 rounded-xl ${bgColor}`}>
+                    <Icon className={`h-5 w-5 ${iconColor}`} />
                   </div>
-                  <p className="text-xs text-slate-400">{desc}</p>
+                  <div className="flex-1">
+                    <div className="flex items-center gap-2 mb-1">
+                      <p className="text-sm font-semibold text-slate-100">{name}</p>
+                      <Badge variant={badgeVariant as 'success' | 'warning' | 'danger'}>{badgeLabel}</Badge>
+                    </div>
+                    <p className="text-xs text-slate-400">{desc}</p>
+                  </div>
                 </div>
-                {status !== 'connected' && (
-                  <Button variant="ghost" size="sm" icon={<Key className="h-3.5 w-3.5" />}>
-                    Add Key
-                  </Button>
-                )}
-              </div>
-            ))}
+              )
+            })}
 
             <div className="mt-4 p-4 bg-brand-600/5 border border-brand-600/20 rounded-xl">
               <div className="flex items-start gap-3">
