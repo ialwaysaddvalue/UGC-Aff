@@ -7,6 +7,12 @@ function getClient(apiKey?: string): Anthropic {
   return new Anthropic({ apiKey: key })
 }
 
+function parseJSON<T>(raw: string): T {
+  // Strip markdown code fences if present (```json ... ``` or ``` ... ```)
+  const stripped = raw.replace(/^```(?:json)?\s*/i, '').replace(/\s*```$/i, '').trim()
+  return JSON.parse(stripped) as T
+}
+
 export async function generateScriptWithClaude(
   request: ScriptGenerationRequest,
   apiKey?: string
@@ -33,7 +39,7 @@ Requirements:
 - The full script should feel authentic, NOT like an ad
 - Generate ${request.hookCount || 5} different hook variations for A/B testing
 
-Return ONLY this JSON structure:
+Return ONLY this JSON structure (no markdown fences):
 {
   "hook": "primary hook here",
   "body": "main body of the script",
@@ -53,8 +59,7 @@ Return ONLY this JSON structure:
   const content = message.content[0]
   if (content.type !== 'text') throw new Error('Unexpected response type from Claude')
 
-  const parsed = JSON.parse(content.text) as ScriptGenerationResponse
-  return parsed
+  return parseJSON<ScriptGenerationResponse>(content.text)
 }
 
 export async function generateHookVariationsWithClaude(
@@ -83,14 +88,14 @@ Rules:
 - Make them feel authentic and conversational
 - No hashtags or emojis
 
-Return ONLY a JSON array of strings: ["hook1", "hook2", ...]`,
+Return ONLY a raw JSON array of strings (no markdown fences): ["hook1", "hook2", ...]`,
       },
     ],
   })
 
   const content = message.content[0]
   if (content.type !== 'text') throw new Error('Unexpected response type')
-  return JSON.parse(content.text) as string[]
+  return parseJSON<string[]>(content.text)
 }
 
 export async function analyzeTrendingContent(
@@ -113,7 +118,7 @@ Based on your knowledge of viral content patterns, provide:
 - 5 hook templates that perform well
 - 5 patterns/styles that creators are using
 
-Return ONLY this JSON:
+Return ONLY this raw JSON (no markdown fences):
 {
   "angles": ["angle1", ...],
   "hooks": ["hook template 1", ...],
@@ -125,5 +130,5 @@ Return ONLY this JSON:
 
   const content = message.content[0]
   if (content.type !== 'text') throw new Error('Unexpected response type')
-  return JSON.parse(content.text)
+  return parseJSON<{ angles: string[]; hooks: string[]; patterns: string[] }>(content.text)
 }
